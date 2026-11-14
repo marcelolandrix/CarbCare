@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#087f8c">
+<title>CarbCare</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f2f8f8;color:#18383d;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:white;padding:22px 18px;text-align:center;border-bottom:1px solid #dce9e9}
+.logo{display:inline-grid;place-items:center;background:#087f8c;color:white;width:54px;height:54px;border-radius:17px;font-size:30px}
+header h1{color:#087f8c;margin:8px 0 2px;font-size:29px}
+header p{color:#698188;margin:0;font-size:13px}
+main{max-width:700px;margin:auto;padding:16px}
+.notice{background:#fff8e8;border-left:4px solid #d79b34;padding:13px;border-radius:10px;font-size:12px;line-height:1.5;margin-bottom:15px}
+nav{display:flex;overflow-x:auto;gap:7px;padding-bottom:12px}
+button{font:inherit;cursor:pointer;border:1px solid #c9dfe0;border-radius:10px;background:white;color:#17606a;padding:11px 13px;font-weight:600}
+nav button{white-space:nowrap;font-size:13px}
+button.active,.primary{background:#087f8c;color:white;border-color:#087f8c}
+section{background:white;padding:20px;border-radius:18px;border:1px solid #deebeb;box-shadow:0 5px 20px #18383d08}
+section[hidden]{display:none}
+h2{font-size:21px;margin:0 0 15px}
+h3{font-size:16px;margin:22px 0 10px}
+label{display:block;font-size:13px;font-weight:650;margin:14px 0 7px}
+input,select{width:100%;font:inherit;padding:12px;border:1px solid #bed5d7;border-radius:10px;background:white;color:#18383d}
+input:focus,select:focus{outline:2px solid #7fcbd0}
+.primary{width:100%;margin-top:16px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #eaf0f1;padding:12px 0}
+.item:last-child{border-bottom:0}
+.item b{font-size:14px}
+.item small{display:block;color:#698188;font-size:12px;margin-top:4px}
+.item button{font-size:12px;padding:8px}
+.total{background:#e7f5f4;padding:17px;border-radius:13px;margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.total strong{font-size:26px;color:#087f8c}
+.muted{font-size:13px;color:#698188;line-height:1.5}
+footer{text-align:center;font-size:11px;color:#789096;padding:24px}
+</style>
+</head>
+<body>
+
+<header>
+<div class="logo">♡</div>
+<h1>CarbCare</h1>
+<p>Seu cuidado, com clareza</p>
+</header>
+
+<main>
+<div class="notice">
+<strong>Versão demonstrativa</strong>
+<div>Contagem estimada de carboidratos. Não calcula doses de insulina. Os valores alimentares são ilustrativos e precisam de conferência antes de qualquer uso clínico. Utilize somente dados fictícios nos testes.</div>
+</div>
+
+<nav>
+<button class="active" onclick="aba('refeicao',this)">Refeição</button>
+<button onclick="aba('alimentos',this)">Alimentos</button>
+<button onclick="aba('historico',this)">Histórico</button>
+<button onclick="aba('saude',this)">Saúde</button>
+<button onclick="aba('perfis',this)">Perfis</button>
+<button onclick="aba('aprender',this)">Aprender</button>
+</nav>
+
+<section id="refeicao">
+<h2>Nova refeição</h2>
+<label>Pesquisar alimento</label>
+<input id="busca" placeholder="Ex.: arroz, banana, pão" oninput="buscar()">
+<div id="resultados"></div>
+<h3>Minha refeição</h3>
+<div id="itens"><p class="muted">Nenhum alimento adicionado.</p></div>
+<div class="total"><span>Carboidratos totais</span><strong id="total">0,0 g</strong></div>
+<label>Nome da refeição</label>
+<input id="nomeRefeicao" placeholder="Ex.: Almoço">
+<button class="primary" onclick="salvarRefeicao()">Salvar refeição</button>
+</section>
+
+<section id="alimentos" hidden>
+<h2>Meus alimentos</h2>
+<p class="muted">Cadastre alimentos usando os carboidratos informados no rótulo por 100 g ou 100 ml.</p>
+<label>Nome do alimento</label>
+<input id="novoNome" placeholder="Ex.: Iogurte natural">
+<label>Carboidratos por 100 g ou 100 ml</label>
+<input id="novoCarb" type="number" min="0" max="100" step="0.1" inputmode="decimal">
+<label>Unidade</label>
+<select id="novaUnidade"><option value="g">Gramas</option><option value="ml">Mililitros</option></select>
+<button class="primary" onclick="adicionarAlimento()">Cadastrar alimento</button>
+<h3>Alimentos cadastrados</h3>
+<div id="listaAlimentos"></div>
+</section>
+
+<section id="historico" hidden>
+<h2>Histórico de refeições</h2>
+<div id="listaHistorico"></div>
+<button onclick="exportarCSV()">Exportar CSV</button>
+</section>
+
+<section id="saude" hidden>
+<h2>Diário de saúde</h2>
+<p class="muted">Registre valores observados e insulina já administrada. Não utilize esta tela para determinar doses.</p>
+<label>Tipo de registro</label>
+<select id="tipoRegistro">
+<option value="Glicemia">Glicemia (mg/dL)</option>
+<option value="Insulina aplicada">Insulina já aplicada (U)</option>
+</select>
+<label>Valor</label>
+<input id="valorRegistro" type="number" min="0" max="1000" step="0.1" inputmode="decimal">
+<label>Observação</label>
+<input id="observacao" placeholder="Opcional">
+<button class="primary" onclick="salvarRegistro()">Salvar registro</button>
+<h3>Registros</h3>
+<div id="listaRegistros"></div>
+</section>
+
+<section id="perfis" hidden>
+<h2>Perfis familiares</h2>
+<p class="muted">Perfis locais, sem login ou sincronização entre aparelhos.</p>
+<label>Nome ou apelido</label>
+<input id="nomePerfil" placeholder="Ex.: Perfil de teste">
+<button class="primary" onclick="criarPerfil()">Criar perfil</button>
+<label>Perfil selecionado</label>
+<select id="perfilAtivo" onchange="mudarPerfil()"></select>
+<div id="listaPerfis"></div>
+</section>
+
+<section id="aprender" hidden>
+<h2>Biblioteca educativa</h2>
+<div class="item"><div><b>Contagem de carboidratos</b><small>Porções e medidas caseiras — conteúdo em preparação</small></div></div>
+<div class="item"><div><b>Leitura de rótulos</b><small>Como identificar carboidratos — em revisão</small></div></div>
+<div class="item"><div><b>Diabetes tipo 1 e tipo 2</b><small>Fundamentos do autocuidado — em revisão</small></div></div>
+<div class="item"><div><b>Hipoglicemia</b><small>Conteúdo pendente de validação clínica</small></div></div>
+<h3>Calculadora de insulina</h3>
+<p class="muted">Em desenvolvimento. Indisponível para uso clínico.</p>
+</section>
+
+<footer>CarbCare V1 • Protótipo para testes • Não validado clinicamente</footer>
+</main>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+const formato=n=>Number(n).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ler=(chave,padrao)=>{try{return JSON.parse(localStorage.getItem("carbcare_"+chave))??padrao}catch{return padrao}};
+const gravar=(chave,dados)=>{try{localStorage.setItem("carbcare_"+chave,JSON.stringify(dados));return true}catch{alert("Não foi possível salvar neste navegador.");return false}};
+
+const base=[
+{id:"a1",nome:"Arroz branco cozido",carb:28.1,un:"g"},
+{id:"a2",nome:"Feijão carioca cozido",carb:13.6,un:"g"},
+{id:"a3",nome:"Banana prata",carb:26,un:"g"},
+{id:"a4",nome:"Aveia em flocos",carb:66.6,un:"g"},
+{id:"a5",nome:"Pão francês",carb:58.6,un:"g"},
+{id:"a6",nome:"Leite integral",carb:4.7,un:"ml"},
+{id:"a7",nome:"Maçã com casca",carb:15.2,un:"g"},
+{id:"a8",nome:"Batata inglesa cozida",carb:11.9,un:"g"}
+];
+
+let personalizados=ler("alimentos",[]);
+let historico=ler("historico",[]);
+let registros=ler("registros",[]);
+let perfis=ler("perfis",[]);
+let ativo=ler("ativo","");
+let refeicao=[];
+
+function aba(id,botao){
+document.querySelectorAll("main section").forEach(s=>s.hidden=s.id!==id);
+document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+botao.classList.add("active");
+atualizar();
+}
+
+function todos(){return [...base,...personalizados]}
+
+function buscar(){
+const q=$("busca").value.trim().toLocaleLowerCase("pt-BR");
+const achados=q?todos().filter(a=>a.nome.toLocaleLowerCase("pt-BR").includes(q)).slice(0,20):[];
+$("resultados").innerHTML=achados.map(a=>`
+<div class="item"><div><b>${esc(a.nome)}</b>
+<small>${formato(a.carb)} g de carboidratos / 100 ${a.un}</small></div>
+<button onclick='inserir(${JSON.stringify(a.id)})'>Adicionar</button></div>
+`).join("")||(q?'<p class="muted">Nenhum alimento encontrado.</p>':"");
+}
+
+function inserir(id){
+const a=todos().find(x=>x.id===id);
+if(!a)return;
+const texto=prompt("Quantidade consumida em "+a.un+":","100");
+if(texto===null)return;
+const qtd=Number(texto.replace(",","."));
+if(!Number.isFinite(qtd)||qtd<=0||qtd>10000){alert("Quantidade inválida.");return}
+refeicao.push({nome:a.nome,qtd,un:a.un,carb:qtd*a.carb/100});
+mostrarRefeicao();
+}
+
+function mostrarRefeicao(){
+$("itens").innerHTML=refeicao.length?refeicao.map((a,i)=>`
+<div class="item"><div><b>${esc(a.nome)}</b>
+<small>${formato(a.qtd)} ${a.un} • ${formato(a.carb)} g carboidratos</small></div>
+<button onclick="removerItem(${i})">Remover</button></div>
+`).join(""):'<p class="muted">Nenhum alimento adicionado.</p>';
+$("total").textContent=formato(refeicao.reduce((s,a)=>s+a.carb,0))+" g";
+}
+
+function removerItem(i){refeicao.splice(i,1);mostrarRefeicao()}
+
+function salvarRefeicao(){
+if(!refeicao.length){alert("Adicione um alimento.");return}
+const item={
+id:Date.now(),
+perfil:ativo,
+data:new Date().toISOString(),
+nome:$("nomeRefeicao").value.trim()||"Refeição",
+itens:refeicao.map(a=>({...a})),
+total:refeicao.reduce((s,a)=>s+a.carb,0)
+};
+const novo=[item,...historico];
+if(!gravar("historico",novo))return;
+historico=novo;
+refeicao=[];
+$("nomeRefeicao").value="";
+mostrarRefeicao();
+alert("Refeição salva!");
+}
+
+function adicionarAlimento(){
+const nome=$("novoNome").value.trim();
+const carb=Number($("novoCarb").value);
+const un=$("novaUnidade").value;
+if(!nome||!Number.isFinite(carb)||carb<0||carb>100){alert("Confira os dados.");return}
+const novo=[...personalizados,{id:"c"+Date.now(),nome,carb,un}];
+if(!gravar("alimentos",novo))return;
+personalizados=novo;
+$("novoNome").value="";
+$("novoCarb").value="";
+atualizar();
+}
+
+function excluirAlimento(id){
+if(!confirm("Excluir este alimento?"))return;
+const novo=personalizados.filter(a=>a.id!==id);
+if(gravar("alimentos",novo)){personalizados=novo;atualizar()}
+}
+
+function criarPerfil(){
+const nome=$("nomePerfil").value.trim();
+if(!nome)return;
+const id="p"+Date.now();
+const novo=[...perfis,{id,nome}];
+if(!gravar("perfis",novo))return;
+perfis=novo;ativo=id;
+gravar("ativo",ativo);
+$("nomePerfil").value="";
+atualizar();
+}
+
+function mudarPerfil(){
+ativo=$("perfilAtivo").value;
+gravar("ativo",ativo);
+atualizar();
+}
+
+function salvarRegistro(){
+if(!ativo){alert("Crie um perfil primeiro.");return}
+const tipo=$("tipoRegistro").value;
+const valor=Number($("valorRegistro").value);
+if($("valorRegistro").value===""||!Number.isFinite(valor)||valor<0||valor>1000){alert("Valor inválido.");return}
+const novo=[{perfil:ativo,tipo,valor,nota:$("observacao").value.trim(),data:new Date().toISOString()},...registros];
+if(!gravar("registros",novo))return;
+registros=novo;
+$("valorRegistro").value="";
+$("observacao").value="";
+atualizar();
+}
+
+function atualizar(){
+$("listaAlimentos").innerHTML=personalizados.map(a=>`
+<div class="item"><div><b>${esc(a.nome)}</b><small>${formato(a.carb)} g / 100 ${a.un}</small></div>
+<button onclick='excluirAlimento(${JSON.stringify(a.id)})'>Excluir</button></div>
+`).join("")||'<p class="muted">Nenhum alimento cadastrado.</p>';
+
+if(!perfis.some(p=>p.id===ativo))ativo=perfis[0]?.id||"";
+$("perfilAtivo").innerHTML=perfis.map(p=>`<option value="${esc(p.id)}">${esc(p.nome)}</option>`).join("")||'<option value="">Crie um perfil</option>';
+$("perfilAtivo").value=ativo;
+$("listaPerfis").innerHTML=perfis.map(p=>`
+<div class="item"><b>${esc(p.nome)}</b><small>${p.id===ativo?"Selecionado":""}</small></div>
+`).join("");
+
+const filtrado=historico.filter(h=>h.perfil===ativo);
+$("listaHistorico").innerHTML=filtrado.map(h=>`
+<div class="item"><div><b>${esc(h.nome)}</b><small>${new Date(h.data).toLocaleString("pt-BR")} • ${h.itens.length} item(ns)</small></div><b>${formato(h.total)} g</b></div>
+`).join("")||'<p class="muted">Nenhuma refeição registrada neste perfil.</p>';
+
+$("listaRegistros").innerHTML=registros.filter(r=>r.perfil===ativo).map(r=>`
+<div class="item"><div><b>${esc(r.tipo)}</b><small>${new Date(r.data).toLocaleString("pt-BR")} • ${esc(r.nota)}</small></div>
+<b>${formato(r.valor)} ${r.tipo==="Glicemia"?"mg/dL":"U"}</b></div>
+`).join("")||'<p class="muted">Nenhum registro neste perfil.</p>';
+}
+
+function exportarCSV(){
+const dados=historico.filter(h=>h.perfil===ativo);
+if(!dados.length){alert("Não há refeições para exportar.");return}
+const linhas=[["Data","Refeição","Alimento","Quantidade","Unidade","Carboidratos (g)"]];
+dados.forEach(h=>h.itens.forEach(a=>linhas.push([new Date(h.data).toLocaleString("pt-BR"),h.nome,a.nome,formato(a.qtd),a.un,formato(a.carb)])));
+const csv="\uFEFF"+linhas.map(l=>l.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");
+const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+const link=document.createElement("a");
+link.href=url;link.download="carbcare-refeicoes.csv";link.click();
+setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+atualizar();
+mostrarRefeicao();
+</script>
+</body>
+</html>
