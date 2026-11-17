@@ -42,4 +42,256 @@ $('export').onclick=()=>{let e=entries.filter(x=>x.profile===active);if(!e.lengt
 function renderProfiles(){if(!profiles.some(x=>x.id===active))active=profiles[0]?.id||'';$('profileSelect').innerHTML=profiles.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');$('profileSelect').value=active}
 $('profileSelect').onchange=()=>{active=$('profileSelect').value;save('active',active);render()};$('createProfile').onclick=()=>{let name=$('profileName').value.trim();if(!name)return;let id='p'+Date.now(),next=[...profiles,{id,name}];if(save('profiles',next)){profiles=next;active=id;save('active',id);$('profileName').value='';render()}};$('clearData').onclick=()=>{if(!confirm('Apagar todos os dados de teste do CarbCare V2 neste navegador?'))return;['custom','profiles','active','entries','glucose'].forEach(k=>localStorage.removeItem('ccv2_'+k));location.reload()};
 function render(){renderFoods();renderDraft();renderDay();renderHistory();renderProfiles()};render();
+  
+<!-- CarbCare V2.3: rastreabilidade -->
+<script>
+(function(){
+"use strict";
+
+const versao="2.3";
+const referencias=[
+{
+id:"TBCA",
+nome:"Tabela Brasileira de Composição de Alimentos",
+instituicao:"Universidade de São Paulo (USP)",
+tipo:"Composição nutricional",
+url:"https://www.tbca.net.br/",
+nota:"Fonte candidata para validação individual dos alimentos. Nenhum valor demonstrativo foi automaticamente atribuído à TBCA."
+},
+{
+id:"TACO",
+nome:"Tabela Brasileira de Composição de Alimentos (TACO)",
+instituicao:"NEPA / UNICAMP",
+tipo:"Composição nutricional",
+url:"https://www.nepa.unicamp.br/",
+nota:"Referência para consulta e comparação. É necessário conferir alimento, preparação, edição e condições de reutilização."
+},
+{
+id:"SBD",
+nome:"Sociedade Brasileira de Diabetes",
+instituicao:"Sociedade Brasileira de Diabetes",
+tipo:"Orientações clínicas e educacionais",
+url:"https://diabetes.org.br/",
+nota:"Consultar documentos específicos, versões e recomendações antes de incorporar orientações clínicas ao aplicativo."
+}
+];
+
+const escapeHTML=s=>String(s).replace(/[&<>"]/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"
+}[c]));
+
+function origem(a){
+const personalizado=extras.some(x=>x[0]===a.nome);
+return {
+estado:personalizado?"usuario":"demonstrativo",
+rotulo:personalizado?"Cadastrado pelo usuário":"Demonstrativo",
+fonte:personalizado?"Cadastro local":"Biblioteca experimental CarbCare",
+versao,
+data:new Date().toISOString().slice(0,10),
+metodo:"Quantidade consumida × carboidratos por 100 g ou ml ÷ 100",
+observacao:personalizado
+?"Valor informado pelo usuário, sem validação externa."
+:"Valor ilustrativo, sem referência nutricional individual verificada."
+};
+}
+
+function detalhe(a){
+const o=a.origem||origem(a);
+const carb=a.carb;
+const q=a.q;
+const nome=a.nome;
+const linhas=[
+"<b>"+escapeHTML(nome)+"</b>",
+"Classificação: "+escapeHTML(o.rotulo),
+"Origem: "+escapeHTML(o.fonte),
+"Versão: "+escapeHTML(o.versao),
+"Registrado em: "+escapeHTML(o.data),
+"Situação: "+escapeHTML(o.observacao)
+];
+if(q!=null&&carb!=null){
+linhas.push("Quantidade: "+fmt(q)+" "+escapeHTML(a.unidade||"g"));
+linhas.push("Carboidratos: "+fmt(carb)+" g");
+}
+linhas.push("Método: "+escapeHTML(o.metodo));
+return linhas.join("\n");
+}
+
+function exibirDetalhe(a){
+alert(detalhe(a).replace(/<\/?b>/g,""));
+}
+
+const nav=document.querySelector("nav");
+const botao=document.createElement("button");
+botao.textContent="Referências";
+botao.onclick=function(){aba("referencias",botao)};
+nav.appendChild(botao);
+
+const painel=document.createElement("section");
+painel.id="referencias";
+painel.hidden=true;
+painel.innerHTML=`
+<h2>Central de Referências</h2>
+<p class="hint">
+Consulte a origem dos dados utilizados no CarbCare.
+Uma fonte listada aqui não significa que todos os
+valores do aplicativo tenham sido validados por ela.
+</p>
+<label>Pesquisar referência</label>
+<input id="pesquisaReferencia"
+placeholder="Nome, instituição ou assunto">
+<div id="listaReferencias"></div>
+<h3>Classificação dos dados</h3>
+<div class="card">
+<b>Referenciado</b>
+<p class="hint">Dado vinculado a uma fonte específica,
+verificada e identificável. Isso não equivale,
+por si só, à validação clínica.</p>
+</div>
+<div class="card">
+<b>Estimado</b>
+<p class="hint">Resultado obtido por conversão de
+medidas ou pressupostos que devem ser informados.</p>
+</div>
+<div class="card">
+<b>Demonstrativo</b>
+<p class="hint">Valor de teste, ainda não validado
+para uso nutricional ou clínico.</p>
+</div>
+<div class="card">
+<b>Cadastrado pelo usuário</b>
+<p class="hint">Informação inserida manualmente,
+cuja origem externa não foi verificada.</p>
+</div>
+<h3>Política de rastreabilidade</h3>
+<p class="hint">
+O registro deve preservar fonte, versão, data,
+método de cálculo e classificação do dado.
+Atualizações futuras não devem alterar
+silenciosamente os registros históricos.
+</p>`;
+document.querySelector("main").appendChild(painel);
+
+function mostrarReferencias(){
+const q=norm(document.getElementById("pesquisaReferencia").value);
+document.getElementById("listaReferencias").innerHTML=
+referencias.filter(r=>!q||norm(
+r.nome+" "+r.instituicao+" "+r.tipo
+).includes(q)).map(r=>`
+<div class="card">
+<b>${escapeHTML(r.nome)}</b>
+<p class="hint">${escapeHTML(r.instituicao)}</p>
+<p><small>${escapeHTML(r.tipo)}</small></p>
+<p class="hint">${escapeHTML(r.nota)}</p>
+<a href="${r.url}" target="_blank"
+rel="noopener noreferrer">Consultar fonte original</a>
+</div>`).join("")||"<p>Nenhuma referência encontrada.</p>";
+}
+document.getElementById("pesquisaReferencia")
+.addEventListener("input",mostrarReferencias);
+mostrarReferencias();
+
+const bibliotecaAnterior=mostrarBiblioteca;
+mostrarBiblioteca=function(){
+bibliotecaAnterior();
+const q=norm($("busca").value);
+const lista=alimentos().filter(a=>
+!q||a.termos.some(t=>t.includes(q)));
+const linhas=$("listaAlimentos").querySelectorAll(".item");
+linhas.forEach((linha,i)=>{
+const a=lista[i];
+if(!a)return;
+const info=document.createElement("button");
+info.textContent="Ver origem";
+info.style.fontSize="12px";
+info.onclick=()=>exibirDetalhe({
+nome:a.nome,
+unidade:a.unidade,
+origem:origem(a)
+});
+linha.appendChild(info);
+});
+};
+
+const rascunhoAnterior=mostrarRascunho;
+mostrarRascunho=function(){
+rascunhoAnterior();
+const linhas=$("resultado").querySelectorAll(".item");
+linhas.forEach((linha,i)=>{
+const a=rascunho[i];
+if(!a)return;
+const info=document.createElement("button");
+info.textContent="Fonte";
+info.style.fontSize="12px";
+info.onclick=()=>exibirDetalhe({
+nome:a.nome,
+q:a.q,
+unidade:a.unidade,
+carb:a.q*a.carb/100,
+origem:origem(a)
+});
+linha.appendChild(info);
+});
+};
+
+const salvarAnterior=salvarRefeicao;
+salvarRefeicao=function(){
+const antes=registros.length;
+const copias=rascunho.map(a=>({
+nome:a.nome,
+q:a.q,
+unidade:a.unidade,
+carb:a.q*a.carb/100,
+origem:origem(a)
+}));
+salvarAnterior();
+if(registros.length>antes){
+const registro=registros[0];
+if(registro&&registro.itens){
+registro.itens.forEach((item,i)=>{
+if(copias[i])item.origem=copias[i].origem;
+});
+gravar("registros",registros);
+}
+}
+};
+
+const historicoAnterior=mostrarHistorico;
+mostrarHistorico=function(){
+historicoAnterior();
+const linhas=$("listaHistorico").querySelectorAll(".card");
+const lista=registros.filter(r=>r.perfil===perfil);
+linhas.forEach((linha,i)=>{
+const registro=lista[i];
+if(!registro)return;
+const botao=document.createElement("button");
+botao.textContent="Rastreabilidade";
+botao.onclick=()=>{
+const texto=registro.itens.map(a=>{
+const o=a.origem;
+return a.nome+"\n"+
+(o?"Fonte: "+o.fonte+
+"\nClassificação: "+o.rotulo+
+"\nVersão: "+o.versao+
+"\nData: "+o.data+
+"\nMétodo: "+o.metodo
+:"Registro anterior à V2.3: origem não documentada.")
+}).join("\n\n");
+alert(texto);
+};
+linha.appendChild(botao);
+});
+};
+
+const titulo=document.querySelector("header small");
+if(titulo)titulo.textContent=
+titulo.textContent.replace(/V2\.2/g,"V2.3");
+
+const rodape=document.querySelector("footer");
+if(rodape)rodape.textContent=
+rodape.textContent.replace(/V2\.2/g,"V2.3");
+
+})();
+</script>
+<!-- Fim da atualização V2.3 -->
+
 </script></body></html>
