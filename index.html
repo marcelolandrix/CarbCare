@@ -1,297 +1,677 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#087e88"><meta name="apple-mobile-web-app-capable" content="yes"><title>CarbCare V2</title><style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#183c41;background:#f3f8f7}*{box-sizing:border-box}body{margin:0}header{background:#fff;padding:20px 18px 15px;text-align:center;border-bottom:1px solid #dcebea}header strong{font-size:27px;color:#087e88}header small{display:block;color:#69878a;margin-top:3px}main{max-width:760px;margin:auto;padding:14px 14px 90px}nav{display:flex;gap:7px;overflow:auto;padding:3px 0 13px}button{font:inherit;border:1px solid #c8ddde;border-radius:12px;padding:11px 13px;background:#fff;color:#16616b;font-weight:600;cursor:pointer}button.primary,.active{background:#087e88;color:#fff;border-color:#087e88}button:disabled{opacity:.45}nav button{white-space:nowrap;font-size:13px}section{background:#fff;border:1px solid #e1ebea;border-radius:18px;padding:17px;margin-bottom:12px}section[hidden]{display:none}h2{font-size:21px;margin:0 0 12px}h3{font-size:16px;margin:20px 0 8px}label{display:block;font-size:13px;font-weight:650;margin:13px 0 6px}input,select,textarea{font:inherit;width:100%;border:1px solid #c8dada;border-radius:11px;padding:12px;color:#183c41;background:#fff}textarea{min-height:96px;resize:vertical}.hint{color:#657e81;font-size:13px;line-height:1.5}.warning{background:#fff5df;border-left:4px solid #c88a24;padding:12px;border-radius:9px;font-size:12px;line-height:1.5;margin-bottom:12px}.row{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}.stack{display:grid;gap:9px}.item{padding:11px 0;border-bottom:1px solid #e9f0ef;display:flex;justify-content:space-between;gap:9px;align-items:center}.item:last-child{border:0}.item b{font-size:14px}.item small{display:block;color:#698287;font-size:12px;margin-top:4px}.item button{font-size:12px;padding:8px}.summary{background:#e5f4f2;border-radius:14px;padding:15px;margin:14px 0}.summary strong{font-size:24px;color:#087e88}.meal{border:1px solid #e4eeee;border-radius:13px;padding:13px;margin:9px 0}.meal .row button{padding:8px}.pill{display:inline-block;background:#eaf5f5;border-radius:20px;padding:5px 10px;font-size:12px;color:#17616a}.full{width:100%;margin-top:12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.muted{opacity:.65}footer{text-align:center;color:#748a8d;font-size:11px;padding:12px}.badge{font-size:11px;color:#945d00;background:#fff1d2;border-radius:20px;padding:5px 8px}#foodResults{max-height:340px;overflow:auto}#draftResults .item{align-items:flex-start}.error{color:#ad3333;font-size:13px}.ok{color:#087e88;font-size:13px}@media(max-width:390px){.two{grid-template-columns:1fr}}
-</style></head><body><header><strong>♡ CarbCare</strong><small>Seu cuidado, com clareza · V2 experimental</small></header><main><div class="warning"><b>Protótipo de testes.</b> Valores da biblioteca são ilustrativos e não constituem uma tabela nutricional validada. Não use os resultados para decisões de dose de insulina. Não registre dados pessoais reais nesta versão.</div><nav id="nav"><button class="active" data-tab="day">Meu dia</button><button data-tab="voice">Falar refeição</button><button data-tab="foods">Alimentos</button><button data-tab="bolus">Bolus (simulação)</button><button data-tab="history">Histórico</button><button data-tab="settings">Perfis</button></nav>
-<section id="day"><h2>Meu dia</h2><div class="row between"><label for="dayDate">Data</label><input type="date" id="dayDate" style="max-width:190px"></div><div class="summary row between"><span>Carboidratos registrados</span><strong id="dayTotal">0,0 g</strong></div><div id="meals"></div><h3>Registro de glicemia (fictícia)</h3><div class="two"><input id="glucose" type="number" min="0" max="1000" placeholder="mg/dL"><input id="glucoseTime" type="time"></div><button class="full" id="saveGlucose">Registrar glicemia</button><div id="glucoseList"></div></section>
-<section id="voice" hidden><h2>Fale sua refeição inteira</h2><p class="hint">Toque no campo e use o microfone do teclado do iPhone para ditar. Exemplo: “duas fatias de pão, uma banana e 200 ml de leite”. Este protótipo usa o ditado do iOS, não captação própria de áudio.</p><label for="speech">O que você comeu?</label><textarea id="speech" placeholder="Dite ou escreva a refeição completa..."></textarea><label for="mealType">Refeição</label><select id="mealType"></select><button class="primary full" id="interpret">Interpretar refeição</button><div id="draftResults"></div><div class="summary row between"><span>Total reconhecido</span><strong id="draftTotal">0,0 g</strong></div><button class="primary full" id="saveMeal" disabled>Conferir e salvar refeição</button></section>
-<section id="foods" hidden><h2>Biblioteca alimentar</h2><p class="hint">Amostra ampliada para desenvolvimento. Valores aproximados e sem validação de fonte individual; não devem ser usados clinicamente.</p><input id="foodSearch" placeholder="Buscar alimento, ex.: macaxeira"><div id="foodResults"></div><h3>Adicionar alimento personalizado</h3><label>Nome</label><input id="customName" placeholder="Nome do alimento"><div class="two"><div><label>Carboidratos / 100 g ou ml</label><input id="customCarb" type="number" step="0.1" min="0" max="100"></div><div><label>Unidade</label><select id="customUnit"><option>g</option><option>ml</option></select></div></div><button class="full" id="addCustom">Cadastrar</button></section>
-<section id="bolus" hidden><h2>Bolus — bancada de simulação</h2><p class="warning">Apenas para conferir a matemática com cenários fictícios. Não calcula uma dose para aplicação. Não considera insulina ativa, exercício, tendências de glicose ou outras condições clínicas.</p><label>Horário fictício</label><input id="simTime" type="time" value="12:00"><div class="two"><div><label>Meta glicêmica (mg/dL)</label><input id="target" type="number" value="100" min="1"></div><div><label>Sensibilidade (mg/dL/U)</label><input id="factor" type="number" value="50" min="0.1" step="0.1"></div><div><label>Relação I:C (g/U)</label><input id="ratio" type="number" value="10" min="0.1" step="0.1"></div><div><label>Glicemia fictícia (mg/dL)</label><input id="simGlucose" type="number" value="123" min="0"></div></div><label>Carboidratos fictícios (g)</label><input id="simCarbs" type="number" value="35" min="0"><button class="primary full" id="calculate">Executar teste matemático</button><div id="simResult" class="summary hint">Informe valores fictícios e execute o teste.</div><h3>Próximos requisitos</h3><p class="hint">Faixas horárias sem sobreposição, testes automatizados, insulina ativa (IOB), limites de segurança, arredondamento, revisão clínica e análise regulatória antes de qualquer uso com pacientes.</p></section>
-<section id="history" hidden><h2>Histórico</h2><p class="hint">Os dados ficam apenas neste navegador e podem ser apagados ao limpar o Safari.</p><div id="historyList"></div><button id="export" class="full">Exportar refeições em CSV</button></section>
-<section id="settings" hidden><h2>Perfis de teste</h2><p class="hint">Somente apelidos fictícios. Não há login, nuvem nem proteção para informações de saúde.</p><label>Perfil ativo</label><select id="profileSelect"></select><label>Novo perfil fictício</label><input id="profileName" placeholder="Ex.: Teste A"><button id="createProfile" class="full">Criar perfil</button><h3>Dados de teste</h3><button id="clearData">Apagar todos os dados locais</button></section>
-<footer>CarbCare V2 · Protótipo experimental · Sem validação clínica</footer></main><script>
-'use strict';
-const $=id=>document.getElementById(id), fmt=n=>Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const load=(k,d)=>{try{return JSON.parse(localStorage.getItem('ccv2_'+k))??d}catch{return d}};
-const save=(k,v)=>{try{localStorage.setItem('ccv2_'+k,JSON.stringify(v));return true}catch{alert('Falha ao gravar dados neste navegador.');return false}};
-const mealNames=['Café da manhã','Lanche da manhã','Almoço','Lanche da tarde','Jantar','Ceia','Refeição extra'];
-// Valores abaixo são ilustrativos para testar a interface, NÃO uma transcrição de SBD/TBCA/TACO.
-const rows=`Arroz branco cozido|28.1|g|arroz;Feijão carioca cozido|13.6|g|feijao;Feijão preto cozido|14|g|feijao preto;Macarrão cozido|30|g|massa;Batata inglesa cozida|12|g|batata;Batata doce cozida|18|g|batata doce;Mandioca cozida|30|g|macaxeira,aipim;Cuscuz de milho cozido|25|g|cuscuz;Tapioca pronta|55|g|beiju;Pão francês|59|g|pao;Pão de forma|49|g|pao de forma;Pão integral|44|g|pao integral;Aveia em flocos|67|g|aveia;Granola|65|g|granola;Farinha de mandioca|86|g|farinha;Farofa|65|g|farofa;Milho verde cozido|19|g|milho;Pipoca sem açúcar|65|g|pipoca;Banana prata|26|g|banana;Banana nanica|23|g|banana;Maçã|15|g|maca;Pera|15|g|pera;Laranja|12|g|laranja;Tangerina|13|g|mexerica;Mamão papaia|11|g|mamao;Manga|17|g|manga;Melancia|8|g|melancia;Melão|8|g|melao;Abacaxi|13|g|abacaxi;Abacate|8|g|abacate;Uva|18|g|uva;Morango|8|g|morango;Kiwi|15|g|kiwi;Goiaba|14|g|goiaba;Caju fruta|10|g|caju;Açaí sem açúcar|6|g|acai;Coco fresco|15|g|coco;Leite integral|5|ml|leite;Leite desnatado|5|ml|leite desnatado;Iogurte natural|5|g|iogurte;Iogurte adoçado|14|g|iogurte doce;Queijo muçarela|3|g|mussarela;Queijo minas|3|g|queijo;Ovo cozido|1|g|ovo;Frango grelhado|0|g|frango;Carne bovina grelhada|0|g|bife,carne;Peixe assado|0|g|peixe;Brócolis cozido|7|g|brocolis;Cenoura cozida|8|g|cenoura;Abóbora cozida|8|g|abobora;Tomate|4|g|tomate;Alface|3|g|alface;Pepino|4|g|pepino;Beterraba cozida|10|g|beterraba;Ervilha cozida|14|g|ervilha;Lentilha cozida|20|g|lentilha;Grão-de-bico cozido|27|g|grao de bico;Amendoim|16|g|amendoim;Castanha de caju|30|g|castanha;Biscoito água e sal|70|g|bolacha;Biscoito recheado|70|g|bolacha recheada;Bolo simples|50|g|bolo;Chocolate ao leite|59|g|chocolate;Sorvete de creme|24|g|sorvete;Açúcar|100|g|acucar;Mel|82|g|mel;Suco de laranja natural|10|ml|suco;Refrigerante comum|11|ml|refrigerante;Refrigerante zero|0|ml|refrigerante zero;Água de coco|5|ml|agua de coco;Café sem açúcar|0|ml|cafe;Arroz de cuxá|25|g|cuxa;Vinagreira refogada|5|g|vinagreira;Pão de queijo|38|g|pao de queijo;Coxinha|33|g|coxinha;Pastel frito|37|g|pastel;Pizza de queijo|32|g|pizza;Hambúrguer completo|25|g|hamburguer;Lasanha|18|g|lasanha;Purê de batata|16|g|pure;Sopa de legumes|8|ml|sopa`;
-const foodBase=rows.split(';').map((r,i)=>{let [name,carb,unit,aliases]=r.split('|');return{id:'b'+i,name,carb:+carb,unit,aliases:(aliases||'').split(',')}});
-let custom=load('custom',[]), profiles=load('profiles',[{id:'demo',name:'Perfil de teste'}]), active=load('active','demo'), entries=load('entries',[]), glucose=load('glucose',[]), draft=[];
-const all=()=>[...foodBase,...custom];const normalize=s=>String(s).toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
-function switchTab(id){document.querySelectorAll('main section').forEach(s=>s.hidden=s.id!==id);document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));render()}
-document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
-function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-$('dayDate').value=today();$('glucoseTime').value=new Date().toTimeString().slice(0,5);$('mealType').innerHTML=mealNames.map(x=>`<option>${esc(x)}</option>`).join('');
-function foods(q){const n=normalize(q);return all().filter(f=>!n||normalize(f.name+' '+f.aliases.join(' ')).includes(n))}
-function renderFoods(){let q=$('foodSearch').value;let f=foods(q).slice(0,100);$('foodResults').innerHTML=f.map(a=>`<div class="item"><div><b>${esc(a.name)}</b><small>${fmt(a.carb)} g de carboidratos / 100 ${a.unit} · dado ilustrativo</small></div><button data-add="${esc(a.id)}">Adicionar</button></div>`).join('')||'<p class="hint">Nenhum alimento encontrado.</p>';document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{let a=all().find(x=>x.id===b.dataset.add);let value=prompt('Quantidade em '+a.unit,'100');if(value===null)return;let qty=Number(value.replace(',','.'));if(!Number.isFinite(qty)||qty<=0||qty>10000)return alert('Quantidade inválida');draft.push({id:a.id,name:a.name,qty,unit:a.unit,carb:a.carb*qty/100});$('speech').value='';renderDraft();switchTab('voice')})}
-$('foodSearch').oninput=renderFoods;
-$('addCustom').onclick=()=>{let name=$('customName').value.trim(),carb=Number($('customCarb').value),unit=$('customUnit').value;if(!name||$('customCarb').value===''||!Number.isFinite(carb)||carb<0||carb>100)return alert('Confira os dados');let next=[...custom,{id:'c'+Date.now(),name,carb,unit,aliases:[]}];if(save('custom',next)){custom=next;$('customName').value='';$('customCarb').value='';renderFoods()}};
-const numbers={'uma':1,'um':1,'duas':2,'dois':2,'tres':3,'quatro':4,'cinco':5,'seis':6,'meia':.5,'meio':.5};
-const portions=[{re:/\b(colheres? de sopa|colheres?)\b/,grams:20},{re:/\b(conchas?)\b/,grams:100},{re:/\b(fatias?)\b/,grams:30},{re:/\b(xicaras?)\b/,grams:160},{re:/\b(copos?)\b/,grams:200},{re:/\b(unidades?)\b/,grams:100}];
-function interpretPart(part){let text=normalize(part);let candidates=all().map(f=>({f,terms:[f.name,...f.aliases].map(normalize).filter(Boolean)}));let matches=candidates.map(x=>({f:x.f,score:Math.max(0,...x.terms.map(t=>text.includes(t)?t.length:0))})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);if(!matches.length)return{unknown:part};let f=matches[0].f;let num=text.match(/\b(\d+(?:[.,]\d+)?)\s*(kg|gramas?|g|ml|mililitros?|litros?|l)\b/);let qty=null,assumed=false;if(num){qty=Number(num[1].replace(',','.'));if(num[2]==='kg'||num[2]==='l'||num[2]==='litro'||num[2]==='litros')qty*=1000}else{let portion=portions.find(p=>p.re.test(text));let countMatch=text.match(/\b(\d+(?:[.,]\d+)?|uma|um|duas|dois|tres|quatro|cinco|seis|meia|meio)\b/);let count=countMatch?(numbers[countMatch[1]]??Number(countMatch[1].replace(',','.'))):1;if(portion){qty=portion.grams*count;assumed=true}else{qty=100*count;assumed=true}}if(!Number.isFinite(qty)||qty<=0||qty>10000)return{unknown:part};return{id:f.id,name:f.name,qty,unit:f.unit,carb:qty*f.carb/100,assumed,original:part}}
-$('interpret').onclick=()=>{let raw=$('speech').value.trim();if(!raw)return alert('Dite ou digite uma refeição');draft=raw.split(/,|\s+e\s+|;/i).map(x=>x.trim()).filter(Boolean).map(interpretPart);renderDraft()};
-function renderDraft(){let total=draft.filter(x=>!x.unknown).reduce((s,x)=>s+x.carb,0);$('draftTotal').textContent=fmt(total)+' g';$('saveMeal').disabled=!draft.length||draft.some(x=>x.unknown);$('draftResults').innerHTML=draft.map((a,i)=>a.unknown?`<div class="item"><div class="error">Não reconhecido: ${esc(a.unknown)}. Pesquise manualmente na biblioteca.</div><button data-remove="${i}">Remover</button></div>`:`<div class="item"><div><b>${esc(a.name)}</b><small>${fmt(a.qty)} ${a.unit} · ${fmt(a.carb)} g carboidratos ${a.assumed?'· porção presumida: confira':''}</small></div><div><button data-edit="${i}">Editar</button> <button data-remove="${i}">×</button></div></div>`).join('');document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{draft.splice(+b.dataset.remove,1);renderDraft()});document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{let a=draft[+b.dataset.edit];let n=prompt('Confirme a quantidade em '+a.unit,String(a.qty));if(n===null)return;let v=Number(n.replace(',','.'));if(!Number.isFinite(v)||v<=0||v>10000)return alert('Quantidade inválida');let f=all().find(x=>x.id===a.id);a.qty=v;a.carb=v*f.carb/100;a.assumed=false;renderDraft()})}
-$('saveMeal').onclick=()=>{if(!draft.length||draft.some(x=>x.unknown))return;let d=$('dayDate').value||today();let item={id:Date.now(),profile:active,date:d,meal:$('mealType').value,items:draft.map(({id,name,qty,unit,carb})=>({id,name,qty,unit,carb})),total:draft.reduce((s,a)=>s+a.carb,0)};let next=[item,...entries];if(save('entries',next)){entries=next;draft=[];$('speech').value='';renderDraft();switchTab('day');alert('Refeição fictícia salva')}};
-function renderDay(){let date=$('dayDate').value;let e=entries.filter(x=>x.profile===active&&x.date===date);$('dayTotal').textContent=fmt(e.reduce((s,x)=>s+x.total,0))+' g';$('meals').innerHTML=mealNames.map(m=>{let list=e.filter(x=>x.meal===m);return`<div class="meal"><div class="row between"><b>${esc(m)}</b><button data-meal="${esc(m)}">+ Adicionar</button></div><small>${fmt(list.reduce((s,x)=>s+x.total,0))} g carboidratos</small>${list.map(x=>`<div class="item"><div><small>${x.items.map(a=>esc(a.name)+' ('+fmt(a.qty)+' '+a.unit+')').join(', ')}</small></div><b>${fmt(x.total)} g</b></div>`).join('')}</div>`}).join('');document.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{$('mealType').value=b.dataset.meal;switchTab('voice')});$('glucoseList').innerHTML=glucose.filter(x=>x.profile===active&&x.date===date).map(x=>`<div class="item"><span>${esc(x.time)}</span><b>${fmt(x.value)} mg/dL</b></div>`).join('')}
-$('dayDate').onchange=renderDay;
-$('saveGlucose').onclick=()=>{let v=Number($('glucose').value);if($('glucose').value===''||!Number.isFinite(v)||v<0||v>1000)return alert('Glicemia inválida');let next=[{profile:active,date:$('dayDate').value,time:$('glucoseTime').value||'12:00',value:v},...glucose];if(save('glucose',next)){glucose=next;$('glucose').value='';renderDay()}};
-$('calculate').onclick=()=>{let ids=['target','factor','ratio','simGlucose','simCarbs'];let a=ids.map(id=>Number($(id).value));if(ids.some((id,i)=>$(id).value===''||!Number.isFinite(a[i]))||a[0]<=0||a[1]<=0||a[2]<=0||a[3]<0||a[4]<0)return $('simResult').innerHTML='<span class="error">Confira os parâmetros fictícios.</span>';let [target,factor,ratio,g,carbs]=a;let food=carbs/ratio,correction=(g-target)/factor,total=food+correction;$('simResult').innerHTML=`<b>Teste matemático, não orientação de dose</b><p>Parcela alimentar: ${fmt(food)} unidades matemáticas</p><p>Parcela de correção (com sinal): ${fmt(correction)} unidades matemáticas</p><p><b>Soma algébrica: ${fmt(total)} unidades matemáticas</b></p><p class="error">Não arredondar, prescrever ou aplicar insulina com base nesta simulação. Correção negativa e IOB não têm regras clínicas implementadas.</p>`};
-function renderHistory(){let e=entries.filter(x=>x.profile===active);$('historyList').innerHTML=e.map(x=>`<div class="item"><div><b>${esc(x.meal)}</b><small>${esc(x.date)} · ${x.items.map(a=>esc(a.name)).join(', ')}</small></div><b>${fmt(x.total)} g</b></div>`).join('')||'<p class="hint">Nenhuma refeição registrada.</p>'}
-$('export').onclick=()=>{let e=entries.filter(x=>x.profile===active);if(!e.length)return alert('Sem registros');let csv='\uFEFFData;Refeição;Alimento;Quantidade;Unidade;Carboidratos (g)\r\n'+e.flatMap(x=>x.items.map(a=>[x.date,x.meal,a.name,fmt(a.qty),a.unit,fmt(a.carb)].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';'))).join('\r\n');let url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));let link=document.createElement('a');link.href=url;link.download='carbcare-teste.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
-function renderProfiles(){if(!profiles.some(x=>x.id===active))active=profiles[0]?.id||'';$('profileSelect').innerHTML=profiles.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');$('profileSelect').value=active}
-$('profileSelect').onchange=()=>{active=$('profileSelect').value;save('active',active);render()};$('createProfile').onclick=()=>{let name=$('profileName').value.trim();if(!name)return;let id='p'+Date.now(),next=[...profiles,{id,name}];if(save('profiles',next)){profiles=next;active=id;save('active',id);$('profileName').value='';render()}};$('clearData').onclick=()=>{if(!confirm('Apagar todos os dados de teste do CarbCare V2 neste navegador?'))return;['custom','profiles','active','entries','glucose'].forEach(k=>localStorage.removeItem('ccv2_'+k));location.reload()};
-function render(){renderFoods();renderDraft();renderDay();renderHistory();renderProfiles()};render();
-  
-<!-- CarbCare V2.3: rastreabilidade -->
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#087e88">
+<title>CarbCare V2.3</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f2f7f7;color:#214146;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+header{background:white;text-align:center;padding:20px;border-bottom:1px solid #dce8e8}
+header h1{margin:0;color:#087e88;font-size:29px}
+header small{color:#698287}
+main{max-width:760px;margin:auto;padding:13px 13px 70px}
+nav{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:13px}
+button{font:inherit;background:white;border:1px solid #cbdedf;border-radius:11px;padding:10px;color:#176e78;cursor:pointer}
+nav button{font-size:13px}
+button.active,.primary{background:#087e88;color:white;border-color:#087e88}
+button:disabled{opacity:.5}
+section{background:white;border:1px solid #e1ebeb;border-radius:17px;padding:17px;margin-bottom:12px}
+section[hidden]{display:none}
+h2{font-size:21px;margin:0 0 13px}
+h3{font-size:17px;margin:22px 0 10px}
+label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}
+input,textarea,select{font:inherit;width:100%;padding:12px;border:1px solid #cbdedf;border-radius:10px;background:white;color:#214146}
+textarea{min-height:110px}
+.full{width:100%;margin-top:12px}
+.hint{font-size:13px;color:#698287;line-height:1.5}
+.notice{background:#fff3d9;padding:12px;border-radius:10px;font-size:12px;line-height:1.5;margin-bottom:12px}
+.card{border:1px solid #e1ebeb;border-radius:12px;padding:13px;margin:9px 0}
+.item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0;border-bottom:1px solid #edf1f1;flex-wrap:wrap}
+.item>div:first-child{flex:1;min-width:0}
+.item small{display:block;color:#698287;font-size:12px;margin-top:4px}
+.item button{font-size:12px;padding:8px;white-space:nowrap}
+.summary{background:#e5f3f2;padding:16px;border-radius:12px;margin:13px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.summary strong{font-size:23px;color:#087e88}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.progress{height:9px;background:#e4eeee;border-radius:10px;overflow:hidden;margin:9px 0}
+.progress div{height:100%;background:#087e88}
+svg.graph{width:100%;height:170px;border:1px solid #e1ebeb;border-radius:10px}
+footer{text-align:center;color:#698287;font-size:11px;padding:15px}
+.tag{display:inline-block;background:#edf3f3;border-radius:7px;padding:4px 7px;font-size:11px;color:#46676b;margin:4px 0}
+.ref{border-left:3px solid #087e88;padding-left:12px;margin:12px 0}
+a{color:#087e88}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+<header>
+<h1>♡ CarbCare</h1>
+<small>Seu cuidado, com clareza · V2.3</small>
+</header>
+<main>
+<div class="notice">
+<b>Protótipo experimental.</b> A biblioteca inicial contém valores demonstrativos, não validados para decisões clínicas. Utilize dados fictícios nos testes. O módulo de bolus não deve ser usado para determinar doses reais.
+</div>
+<nav id="menu">
+<button class="active" data-aba="dia">Meu dia</button>
+<button data-aba="voz">Falar refeição</button>
+<button data-aba="biblioteca">Biblioteca</button>
+<button data-aba="metas">Metas</button>
+<button data-aba="dicas">Dicas</button>
+<button data-aba="bolus">Bolus</button>
+<button data-aba="historico">Histórico</button>
+<button data-aba="referencias">Referências</button>
+<button data-aba="perfis">Perfis</button>
+</nav>
+
+<section id="dia">
+<h2>Meu dia</h2>
+<label>Data</label>
+<input type="date" id="data">
+<div class="summary"><span>Carboidratos</span><strong id="totalDia">0 g</strong></div>
+<div class="summary"><span>Calorias conhecidas</span><strong id="caloriasDia">—</strong></div>
+<p class="hint" id="avisoCalorias"></p>
+<div id="refeicoes"></div>
+<h3>Glicemia fictícia</h3>
+<div class="grid">
+<input type="number" id="glicemia" placeholder="mg/dL">
+<input type="time" id="horaGlicemia">
+</div>
+<button class="full" id="btnGlicemia">Registrar</button>
+<div id="listaGlicemia"></div>
+<h3>Gráfico de glicemia</h3>
+<div id="graficoGlicemia"></div>
+</section>
+
+<section id="voz" hidden>
+<h2>Fale sua refeição inteira</h2>
+<p class="hint">Use o microfone do teclado do iPhone. Exemplo: “Comi três colheres de arroz, 100 gramas de frango, uma porção de purê de batata, uma maçã e um copo de suco de uva”.</p>
+<label>O que você comeu?</label>
+<textarea id="fala" placeholder="Dite ou escreva sua refeição..."></textarea>
+<label>Refeição</label>
+<select id="tipo"></select>
+<button class="primary full" id="btnInterpretar">Interpretar refeição</button>
+<div id="resultado"></div>
+<div class="summary"><span>Total reconhecido</span><strong id="totalVoz">0 g</strong></div>
+<button class="primary full" id="btnSalvarRefeicao">Conferir e salvar</button>
+</section>
+
+<section id="biblioteca" hidden>
+<h2>Biblioteca alimentar</h2>
+<p class="hint">Valores da biblioteca inicial são ilustrativos. Toque em <b>Ver origem</b> para conferir a classificação de cada alimento.</p>
+<input id="busca" placeholder="Buscar alimento...">
+<div id="listaAlimentos"></div>
+<h3>Cadastrar alimento</h3>
+<label>Nome</label>
+<input id="novoNome">
+<label>Carboidratos por 100 g ou ml</label>
+<input id="novoCarb" type="number" min="0" step="0.1">
+<label>Calorias por 100 g ou ml (opcional)</label>
+<input id="novoKcal" type="number" min="0" step="0.1">
+<label>Unidade</label>
+<select id="novaUnidade"><option>g</option><option>ml</option></select>
+<label>Fonte do alimento (opcional)</label>
+<input id="novaFonte" placeholder="Ex.: rótulo do produto">
+<label>Link da fonte (opcional)</label>
+<input id="novoLink" type="url" placeholder="https://...">
+<button class="full" id="btnCadastrar">Cadastrar alimento</button>
+</section>
+
+<section id="metas" hidden>
+<h2>Metas de carboidratos</h2>
+<p class="hint">Metas opcionais de acompanhamento para um perfil de teste. Não constituem recomendação nutricional.</p>
+<label><input id="ativarMetas" type="checkbox" style="width:auto"> Ativar metas</label>
+<div id="camposMetas"></div>
+<button class="primary full" id="btnMetas">Salvar metas</button>
+</section>
+
+<section id="dicas" hidden>
+<h2>Dicas e orientações</h2>
+<h3>Contagem de carboidratos</h3>
+<p>Considere o alimento, a preparação e a quantidade consumida. Confira os dados em fontes nutricionais apropriadas.</p>
+<h3>Medidas caseiras</h3>
+<p>Colheres, conchas, fatias e copos podem apresentar pesos diferentes. As conversões deste protótipo são estimativas.</p>
+<h3>Entrada por voz</h3>
+<p>Dite a refeição inteira, confira os alimentos identificados e ajuste as quantidades antes de salvar.</p>
+<h3>Rastreabilidade</h3>
+<p>Consulte a origem de cada alimento e diferencie dados referenciados, estimados, demonstrativos e cadastrados pelo usuário.</p>
+<h3>Glicemia e insulina</h3>
+<p>Os parâmetros de insulinoterapia são individuais. O módulo matemático experimental não contempla insulina ativa ou validação clínica.</p>
+</section>
+
+<section id="bolus" hidden>
+<h2>Bolus — simulação matemática</h2>
+<div class="notice">Somente para cenários fictícios. Não usar para calcular insulina real.</div>
+<label>Meta fictícia (mg/dL)</label>
+<input id="meta" type="number" value="100">
+<label>Sensibilidade fictícia (mg/dL/U)</label>
+<input id="sensibilidade" type="number" value="50">
+<label>Relação I:C fictícia (g/U)</label>
+<input id="relacao" type="number" value="10">
+<label>Glicemia fictícia (mg/dL)</label>
+<input id="glicemiaSim" type="number" value="123">
+<label>Carboidratos fictícios (g)</label>
+<input id="carbSim" type="number" value="35">
+<button class="primary full" id="btnSimular">Executar teste</button>
+<div class="card" id="resultadoBolus">Aguardando simulação.</div>
+</section>
+
+<section id="historico" hidden>
+<h2>Histórico</h2>
+<div id="listaHistorico"></div>
+<h3>Carboidratos dos últimos 7 dias</h3>
+<div id="graficoSemana"></div>
+<button class="full" id="btnExportar">Exportar CSV</button>
+</section>
+
+<section id="referencias" hidden>
+<h2>Central de Referências</h2>
+<p class="hint">Aqui estão as fontes candidatas e a classificação dos dados utilizados pelo aplicativo. Uma fonte listada não significa que os valores da biblioteca já foram verificados nela.</p>
+<input id="pesquisaReferencia" placeholder="Pesquisar referência...">
+<div id="listaReferencias"></div>
+<h3>Classificação das informações</h3>
+<div class="card"><b>Referenciado</b><p class="hint">Dado associado a uma fonte específica e verificável. A referência não equivale, por si só, à validação clínica.</p></div>
+<div class="card"><b>Estimado</b><p class="hint">Quantidade ou resultado obtido por conversão de medidas, com pressupostos identificados.</p></div>
+<div class="card"><b>Demonstrativo</b><p class="hint">Valor utilizado nos testes, ainda sem referência nutricional individual verificada.</p></div>
+<div class="card"><b>Cadastrado pelo usuário</b><p class="hint">Valor inserido manualmente, com ou sem indicação de uma fonte externa.</p></div>
+<h3>Política de rastreabilidade</h3>
+<p class="hint">Os novos registros preservam classificação, fonte, versão, data e método de cálculo. Dados anteriores à V2.3 não recebem referências retroativas.</p>
+</section>
+
+<section id="perfis" hidden>
+<h2>Perfis de teste</h2>
+<p class="hint">Use apelidos fictícios. Os registros ficam neste navegador, sem autenticação ou proteção adequada para dados reais de saúde.</p>
+<label>Perfil ativo</label>
+<select id="perfilAtivo"></select>
+<label>Novo perfil</label>
+<input id="novoPerfil" placeholder="Ex.: Teste B">
+<button class="full" id="btnPerfil">Criar perfil</button>
+<button class="full" id="btnApagar">Apagar dados de teste</button>
+</section>
+
+<footer>CarbCare V2.3 · Protótipo experimental</footer>
+</main>
+
 <script>
-(function(){
 "use strict";
 
-const versao="2.3";
-const referencias=[
-{
-id:"TBCA",
-nome:"Tabela Brasileira de Composição de Alimentos",
-instituicao:"Universidade de São Paulo (USP)",
-tipo:"Composição nutricional",
-url:"https://www.tbca.net.br/",
-nota:"Fonte candidata para validação individual dos alimentos. Nenhum valor demonstrativo foi automaticamente atribuído à TBCA."
-},
-{
-id:"TACO",
-nome:"Tabela Brasileira de Composição de Alimentos (TACO)",
-instituicao:"NEPA / UNICAMP",
-tipo:"Composição nutricional",
-url:"https://www.nepa.unicamp.br/",
-nota:"Referência para consulta e comparação. É necessário conferir alimento, preparação, edição e condições de reutilização."
-},
-{
-id:"SBD",
-nome:"Sociedade Brasileira de Diabetes",
-instituicao:"Sociedade Brasileira de Diabetes",
-tipo:"Orientações clínicas e educacionais",
-url:"https://diabetes.org.br/",
-nota:"Consultar documentos específicos, versões e recomendações antes de incorporar orientações clínicas ao aplicativo."
-}
+const $=id=>document.getElementById(id);
+const nomes=["Café da manhã","Lanche da manhã","Almoço","Lanche da tarde","Jantar","Ceia"];
+const fmt=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const norm=s=>String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s]/g," ").replace(/\s+/g," ").trim();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ler=(k,d)=>{try{return JSON.parse(localStorage.getItem("cc22_"+k))??d}catch{return d}};
+const gravar=(k,v)=>localStorage.setItem("cc22_"+k,JSON.stringify(v));
+
+const dados=[
+["Arroz branco cozido",28.1,"g","arroz"],
+["Arroz integral",25.8,"g","arroz integral"],
+["Feijão carioca",13.6,"g","feijao"],
+["Feijão preto",14,"g","feijao preto"],
+["Macarrão cozido",30,"g","macarrao,massa"],
+["Purê de batata",16,"g","pure"],
+["Batata cozida",12,"g","batata"],
+["Batata doce",18,"g","batata doce"],
+["Mandioca cozida",30,"g","macaxeira,aipim,mandioca"],
+["Cuscuz de milho",25,"g","cuscuz"],
+["Tapioca",65,"g","tapioca"],
+["Pão francês",57,"g","pao frances,pao"],
+["Pão de forma",49,"g","pao de forma"],
+["Aveia",66,"g","aveia"],
+["Granola",64,"g","granola"],
+["Farinha de mandioca",80,"g","farinha"],
+["Farofa",60,"g","farofa"],
+["Milho cozido",19,"g","milho"],
+["Frango grelhado",0,"g","frango,peito de frango"],
+["Carne bovina",0,"g","carne,bife"],
+["Peixe grelhado",0,"g","peixe"],
+["Ovo",1,"g","ovo,ovos"],
+["Queijo muçarela",3,"g","queijo,mussarela"],
+["Presunto",2,"g","presunto"],
+["Leite integral",5,"ml","leite"],
+["Leite desnatado",5,"ml","leite desnatado"],
+["Iogurte natural",5,"g","iogurte"],
+["Banana",23,"g","banana"],
+["Maçã",15,"g","maca"],
+["Pera",15,"g","pera"],
+["Mamão",11,"g","mamao"],
+["Melancia",8,"g","melancia"],
+["Melão",8,"g","melao"],
+["Manga",15,"g","manga"],
+["Uva",18,"g","uva"],
+["Laranja",12,"g","laranja"],
+["Abacaxi",13,"g","abacaxi"],
+["Morango",8,"g","morango"],
+["Abacate",6,"g","abacate"],
+["Goiaba",14,"g","goiaba"],
+["Açaí sem açúcar",6,"g","acai"],
+["Suco de uva",15,"ml","suco de uva"],
+["Suco de laranja",10,"ml","suco de laranja"],
+["Suco de maçã",12,"ml","suco de maca"],
+["Água de coco",4,"ml","agua de coco"],
+["Refrigerante comum",11,"ml","refrigerante"],
+["Refrigerante zero",0,"ml","refrigerante zero"],
+["Café sem açúcar",0,"ml","cafe"],
+["Açúcar",100,"g","acucar"],
+["Mel",82,"g","mel"],
+["Chocolate ao leite",59,"g","chocolate"],
+["Biscoito água e sal",70,"g","biscoito,bolacha"],
+["Bolo simples",50,"g","bolo"],
+["Pizza",32,"g","pizza"],
+["Hambúrguer",24,"g","hamburguer"],
+["Batata frita",41,"g","batata frita"],
+["Sopa de legumes",8,"g","sopa"],
+["Salada de folhas",3,"g","salada"],
+["Cenoura cozida",8,"g","cenoura"],
+["Brócolis cozido",5,"g","brocolis"],
+["Tomate",4,"g","tomate"],
+["Beterraba cozida",10,"g","beterraba"],
+["Inhame cozido",27,"g","inhame"],
+["Abóbora cozida",8,"g","abobora"],
+["Pipoca",70,"g","pipoca"],
+["Pão de queijo",40,"g","pao de queijo"],
+["Coxinha",30,"g","coxinha"],
+["Pastel",38,"g","pastel"],
+["Sorvete",24,"g","sorvete"],
+["Pudim",32,"g","pudim"]
 ];
 
-const escapeHTML=s=>String(s).replace(/[&<>"]/g,c=>({
-"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"
-}[c]));
+const referencias=[
+{id:"TBCA",nome:"Tabela Brasileira de Composição de Alimentos",instituicao:"Universidade de São Paulo",tipo:"Composição nutricional",url:"https://www.tbca.net.br/",nota:"Fonte candidata. Os valores demonstrativos ainda não foram individualmente conferidos nesta tabela."},
+{id:"TACO",nome:"Tabela Brasileira de Composição de Alimentos (TACO)",instituicao:"NEPA / UNICAMP",tipo:"Composição nutricional",url:"https://www.nepa.unicamp.br/",nota:"Fonte candidata para consulta. Conferir edição, preparação e condições de reutilização."},
+{id:"SBD",nome:"Sociedade Brasileira de Diabetes",instituicao:"Sociedade Brasileira de Diabetes",tipo:"Orientações clínicas e educacionais",url:"https://diabetes.org.br/",nota:"Consultar documentos específicos, ano e versão antes de incorporar recomendações."}
+];
 
+let extras=ler("extras",[]);
+let registros=ler("registros",[]);
+let glicemias=ler("glicemias",[]);
+let perfis=ler("perfis",["Teste A"]);
+let perfil=ler("perfil","Teste A");
+let rascunho=[];
+
+function hoje(){
+let d=new Date();
+return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
 function origem(a){
-const personalizado=extras.some(x=>x[0]===a.nome);
+const manual=!!a.manual;
 return {
-estado:personalizado?"usuario":"demonstrativo",
-rotulo:personalizado?"Cadastrado pelo usuário":"Demonstrativo",
-fonte:personalizado?"Cadastro local":"Biblioteca experimental CarbCare",
-versao,
-data:new Date().toISOString().slice(0,10),
-metodo:"Quantidade consumida × carboidratos por 100 g ou ml ÷ 100",
-observacao:personalizado
-?"Valor informado pelo usuário, sem validação externa."
-:"Valor ilustrativo, sem referência nutricional individual verificada."
+estado:manual?"usuario":"demonstrativo",
+rotulo:manual?"Cadastrado pelo usuário":"Demonstrativo",
+fonte:manual?(a.fonte||"Cadastro local"):"Biblioteca experimental CarbCare",
+url:manual?(a.url||""):"",
+versao:"2.3",
+data:hoje(),
+metodo:"Carboidratos por 100 g ou ml × quantidade ÷ 100",
+observacao:manual?"Informação cadastrada pelo usuário; fonte externa não verificada.":"Valor ilustrativo sem validação nutricional individual."
 };
 }
-
-function detalhe(a){
-const o=a.origem||origem(a);
-const carb=a.carb;
-const q=a.q;
-const nome=a.nome;
-const linhas=[
-"<b>"+escapeHTML(nome)+"</b>",
-"Classificação: "+escapeHTML(o.rotulo),
-"Origem: "+escapeHTML(o.fonte),
-"Versão: "+escapeHTML(o.versao),
-"Registrado em: "+escapeHTML(o.data),
-"Situação: "+escapeHTML(o.observacao)
+function alimentos(){
+return [
+...dados.map((a,i)=>({
+id:i,nome:a[0],carb:a[1],unidade:a[2],
+kcal:null,manual:false,
+termos:[a[0],...a[3].split(",")].map(norm)
+})),
+...extras.map((a,i)=>({
+id:dados.length+i,nome:a[0],carb:a[1],unidade:a[2],
+kcal:a[4]??null,manual:true,
+fonte:a[5]||"",url:a[6]||"",
+termos:[a[0]].map(norm)
+}))
 ];
-if(q!=null&&carb!=null){
-linhas.push("Quantidade: "+fmt(q)+" "+escapeHTML(a.unidade||"g"));
-linhas.push("Carboidratos: "+fmt(carb)+" g");
 }
-linhas.push("Método: "+escapeHTML(o.metodo));
-return linhas.join("\n");
+function obterOrigem(a){return a.origem||origem(a)}
+function detalhes(a){
+let o=obterOrigem(a);
+let texto=[
+"Alimento: "+a.nome,
+"Classificação: "+o.rotulo,
+"Fonte: "+o.fonte,
+"Versão: "+o.versao,
+"Data: "+o.data,
+"Método: "+o.metodo,
+"Observação: "+o.observacao
+];
+if(o.url)texto.push("Link: "+o.url);
+if(a.q!=null)texto.push("Quantidade: "+fmt(a.q)+" "+a.unidade);
+if(a.carbTotal!=null)texto.push("Carboidratos: "+fmt(a.carbTotal)+" g");
+if(a.estimado)texto.push("Quantidade estimada por medida caseira.");
+alert(texto.join("\n"));
 }
 
-function exibirDetalhe(a){
-alert(detalhe(a).replace(/<\/?b>/g,""));
+function aba(id){
+document.querySelectorAll("main section").forEach(s=>s.hidden=s.id!==id);
+document.querySelectorAll("#menu button").forEach(b=>b.classList.toggle("active",b.dataset.aba===id));
+if(id==="dia")mostrarDia();
+if(id==="biblioteca")mostrarBiblioteca();
+if(id==="metas")mostrarMetas();
+if(id==="historico")mostrarHistorico();
+if(id==="referencias")mostrarReferencias();
+if(id==="perfis")mostrarPerfis();
+window.scrollTo(0,0);
+}
+document.querySelectorAll("#menu button").forEach(b=>b.addEventListener("click",()=>aba(b.dataset.aba)));
+
+$("data").value=hoje();
+$("horaGlicemia").value=new Date().toTimeString().slice(0,5);
+$("tipo").innerHTML=nomes.map(n=>`<option>${n}</option>`).join("");
+$("data").addEventListener("change",mostrarDia);
+
+function mostrarBiblioteca(){
+let q=norm($("busca").value);
+let lista=alimentos().filter(a=>!q||a.termos.some(t=>t.includes(q)));
+$("listaAlimentos").innerHTML=lista.map(a=>`
+<div class="item">
+<div><b>${esc(a.nome)}</b>
+<small>${fmt(a.carb)} g carboidratos / 100 ${a.unidade}</small>
+<small>${a.kcal===null?"Calorias pendentes":fmt(a.kcal)+" kcal / 100 "+a.unidade}</small>
+<span class="tag">${a.manual?"Usuário":"Demonstrativo"}</span>
+</div>
+<button data-add="${a.id}">Adicionar</button>
+<button data-origem="${a.id}">Ver origem</button>
+</div>`).join("")||"<p>Nenhum alimento encontrado.</p>";
+$("listaAlimentos").querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>adicionarManual(Number(b.dataset.add)));
+$("listaAlimentos").querySelectorAll("[data-origem]").forEach(b=>b.onclick=()=>detalhes(alimentos()[Number(b.dataset.origem)]));
+}
+$("busca").addEventListener("input",mostrarBiblioteca);
+
+function adicionarManual(id){
+let a=alimentos()[id];
+let x=prompt("Quantidade em "+a.unidade,"100");
+if(x===null)return;
+let q=Number(x.replace(",","."));
+if(!Number.isFinite(q)||q<=0)return alert("Quantidade inválida.");
+rascunho.push({...a,q,estimado:false,origem:origem(a)});
+mostrarRascunho();aba("voz");
+}
+function cadastrar(){
+let nome=$("novoNome").value.trim();
+let c=Number($("novoCarb").value);
+let k=$("novoKcal").value===""?null:Number($("novoKcal").value);
+let url=$("novoLink").value.trim();
+if(!nome||$("novoCarb").value===""||!Number.isFinite(c)||c<0||c>100||k!==null&&(!Number.isFinite(k)||k<0||k>1000))return alert("Confira os dados.");
+if(url&&!/^https?:\/\/\S+$/i.test(url))return alert("Confira o link da fonte.");
+extras.push([nome,c,$("novaUnidade").value,"",k,$("novaFonte").value.trim(),url]);
+gravar("extras",extras);
+["novoNome","novoCarb","novoKcal","novaFonte","novoLink"].forEach(id=>$(id).value="");
+mostrarBiblioteca();
+}
+$("btnCadastrar").onclick=cadastrar;
+
+const numeros={um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,meio:.5,meia:.5};
+function quantidade(texto){
+let t=norm(texto);
+let peso=t.match(/(\d+(?:[.,]\d+)?)\s*(kg|gramas?|g|ml|mililitros?|litros?|l)\b/);
+if(peso){
+let q=Number(peso[1].replace(",","."));
+if(["kg","l","litro","litros"].includes(peso[2]))q*=1000;
+return {q,estimado:false};
+}
+let m=t.match(/\b(\d+(?:[.,]\d+)?|um|uma|dois|duas|tres|quatro|cinco|seis|meio|meia)\b/);
+let n=m?(numeros[m[1]]??Number(m[1].replace(",","."))):1;
+let base=100;
+if(/\bcolher/.test(t))base=20;
+else if(/\bconcha/.test(t))base=100;
+else if(/\bfatia/.test(t))base=30;
+else if(/\bxicara/.test(t))base=160;
+else if(/\bcopo/.test(t))base=200;
+return {q:n*base,estimado:true};
+}
+function interpretar(){
+let texto=norm($("fala").value);
+if(!texto)return alert("Dite uma refeição.");
+let achados=[];
+for(let a of alimentos())for(let termo of a.termos){
+if(termo.length<3)continue;
+let inicio=0,pos;
+while((pos=texto.indexOf(termo,inicio))>=0){
+let antes=pos===0?" ":texto[pos-1];
+let depois=texto[pos+termo.length]||" ";
+if(antes===" "&&depois===" ")achados.push({a,inicio:pos,fim:pos+termo.length,tamanho:termo.length});
+inicio=pos+termo.length;
+}}
+achados.sort((a,b)=>b.tamanho-a.tamanho);
+let escolhidos=[];
+for(let a of achados)if(!escolhidos.some(b=>a.inicio<b.fim&&a.fim>b.inicio))escolhidos.push(a);
+escolhidos.sort((a,b)=>a.inicio-b.inicio);
+rascunho=[];
+for(let i=0;i<escolhidos.length;i++){
+let a=escolhidos[i];
+let anterior=i?escolhidos[i-1].fim:0;
+let quant=quantidade(texto.slice(anterior,a.fim));
+rascunho.push({...a.a,...quant,origem:origem(a.a)});
+}
+mostrarRascunho();
+if(!rascunho.length)alert("Nenhum alimento reconhecido. Procure na Biblioteca.");
+}
+$("btnInterpretar").onclick=interpretar;
+
+function mostrarRascunho(){
+let total=0;
+$("resultado").innerHTML=rascunho.map((a,i)=>{
+let carb=a.q*a.carb/100;total+=carb;
+let kcal=a.kcal===null?null:a.q*a.kcal/100;
+return `<div class="item"><div><b>${esc(a.nome)}</b>
+<small>${fmt(a.q)} ${a.unidade} · ${fmt(carb)} g carboidratos</small>
+<small>${kcal===null?"Calorias pendentes":fmt(kcal)+" kcal"}${a.estimado?" · Porção presumida":""}</small>
+<span class="tag">${esc(a.origem.rotulo)}</span></div>
+<button data-editar="${i}">Editar</button>
+<button data-fonte="${i}">Fonte</button>
+<button data-remover="${i}">×</button></div>`;
+}).join("");
+$("totalVoz").textContent=fmt(total)+" g";
+$("resultado").querySelectorAll("[data-editar]").forEach(b=>b.onclick=()=>editar(Number(b.dataset.editar)));
+$("resultado").querySelectorAll("[data-remover]").forEach(b=>b.onclick=()=>remover(Number(b.dataset.remover)));
+$("resultado").querySelectorAll("[data-fonte]").forEach(b=>b.onclick=()=>{
+let a=rascunho[Number(b.dataset.fonte)];
+detalhes({...a,carbTotal:a.q*a.carb/100});
+});
+}
+function editar(i){
+let a=rascunho[i],x=prompt("Quantidade em "+a.unidade,a.q);
+if(x===null)return;
+let q=Number(x.replace(",","."));
+if(!Number.isFinite(q)||q<=0)return alert("Quantidade inválida.");
+a.q=q;a.estimado=false;mostrarRascunho();
+}
+function remover(i){rascunho.splice(i,1);mostrarRascunho()}
+function salvarRefeicao(){
+if(!rascunho.length)return alert("Nenhum alimento para salvar.");
+if(rascunho.some(a=>a.estimado)&&!confirm("Existem quantidades presumidas. Você conferiu todas?"))return;
+let itens=rascunho.map(a=>({
+nome:a.nome,q:a.q,unidade:a.unidade,
+carb:a.q*a.carb/100,
+kcal:a.kcal===null?null:a.q*a.kcal/100,
+origem:{...a.origem,quantidadeEstimada:a.estimado}
+}));
+registros.unshift({perfil,data:$("data").value,tipo:$("tipo").value,itens});
+gravar("registros",registros);
+rascunho=[];$("fala").value="";
+mostrarRascunho();aba("dia");
+alert("Refeição de teste salva.");
+}
+$("btnSalvarRefeicao").onclick=salvarRefeicao;
+
+function metasAtuais(){return ler("metas_"+perfil,{ativo:false,valores:{}})}
+function mostrarMetas(){
+let m=metasAtuais();
+$("ativarMetas").checked=!!m.ativo;
+$("camposMetas").innerHTML=nomes.map((n,i)=>`
+<label>${n} (g)</label>
+<input type="number" min="0" max="1000" step="1" id="meta_${i}" value="${m.valores[n]??0}">`).join("");
+}
+function salvarMetas(){
+let valores={};
+for(let i=0;i<nomes.length;i++){
+let el=$("meta_"+i),v=Number(el.value);
+if(el.value===""||!Number.isFinite(v)||v<0||v>1000)return alert("Revise as metas.");
+valores[nomes[i]]=v;
+}
+gravar("metas_"+perfil,{ativo:$("ativarMetas").checked,valores});
+mostrarDia();alert("Metas salvas.");
+}
+$("btnMetas").onclick=salvarMetas;
+
+function mostrarDia(){
+let data=$("data").value;
+let lista=registros.filter(r=>r.perfil===perfil&&r.data===data);
+let todos=lista.flatMap(r=>r.itens);
+let total=todos.reduce((s,a)=>s+a.carb,0);
+let conhecidos=todos.filter(a=>a.kcal!=null);
+$("totalDia").textContent=fmt(total)+" g";
+$("caloriasDia").textContent=conhecidos.length?fmt(conhecidos.reduce((s,a)=>s+a.kcal,0))+" kcal":"—";
+$("avisoCalorias").textContent=conhecidos.length===todos.length&&todos.length?"Todos os itens possuem calorias cadastradas.":"Calorias parciais: "+conhecidos.length+" de "+todos.length+" itens possuem dados.";
+let metas=metasAtuais();
+$("refeicoes").innerHTML=nomes.map((nome,i)=>{
+let rs=lista.filter(r=>r.tipo===nome);
+let itens=rs.flatMap(r=>r.itens);
+let soma=itens.reduce((s,a)=>s+a.carb,0);
+let kcal=itens.some(a=>a.kcal==null)?null:itens.reduce((s,a)=>s+a.kcal,0);
+let alvo=metas.ativo?Number(metas.valores[nome]||0):0;
+return `<div class="card"><div class="item"><b>${nome}</b>
+<button data-nova="${i}">+ Adicionar</button></div>
+<small>${fmt(soma)} g carboidratos${alvo?" / meta "+fmt(alvo)+" g":""}</small>
+${alvo?`<div class="progress"><div style="width:${Math.min(100,soma/alvo*100)}%"></div></div>`:""}
+<p class="hint">Calorias: ${kcal===null?"dados incompletos":fmt(kcal)+" kcal"}</p>
+${rs.map(r=>`<p class="hint">${r.itens.map(a=>esc(a.nome)+" ("+fmt(a.q)+" "+esc(a.unidade)+")").join(", ")}</p>`).join("")}
+</div>`;
+}).join("");
+$("refeicoes").querySelectorAll("[data-nova]").forEach(b=>b.onclick=()=>{
+$("tipo").value=nomes[Number(b.dataset.nova)];aba("voz");
+});
+let gs=glicemias.filter(g=>g.perfil===perfil&&g.data===data).sort((a,b)=>a.hora.localeCompare(b.hora));
+$("listaGlicemia").innerHTML=gs.map(g=>`<div class="item"><span>${esc(g.hora)}</span><b>${fmt(g.valor)} mg/dL</b></div>`).join("");
+$("graficoGlicemia").innerHTML=grafico(gs.map(g=>({rotulo:g.hora,valor:g.valor})),"Glicemias fictícias");
+}
+function salvarGlicemia(){
+let el=$("glicemia"),valor=Number(el.value);
+if(el.value===""||!Number.isFinite(valor)||valor<0||valor>1000)return alert("Valor inválido.");
+glicemias.push({perfil,data:$("data").value,hora:$("horaGlicemia").value,valor});
+gravar("glicemias",glicemias);
+el.value="";mostrarDia();
+}
+$("btnGlicemia").onclick=salvarGlicemia;
+
+function grafico(pontos,titulo){
+if(!pontos.length)return '<p class="hint">Sem registros para o gráfico.</p>';
+let max=Math.max(100,...pontos.map(p=>p.valor));
+let largura=340/pontos.length;
+return `<svg class="graph" viewBox="0 0 360 170" role="img" aria-label="${esc(titulo)}">
+<line x1="10" y1="125" x2="350" y2="125" stroke="#aac2c2"/>
+${pontos.map((p,i)=>{
+let h=p.valor/max*105,x=12+i*largura,w=Math.max(4,largura*.55);
+return `<rect x="${x}" y="${125-h}" width="${w}" height="${h}" rx="3" fill="#087e88"/>
+<text x="${x+w/2}" y="144" text-anchor="middle" font-size="10">${esc(p.rotulo)}</text>
+<text x="${x+w/2}" y="${Math.max(10,120-h)}" text-anchor="middle" font-size="10">${fmt(p.valor)}</text>`;
+}).join("")}</svg>`;
 }
 
-const nav=document.querySelector("nav");
-const botao=document.createElement("button");
-botao.textContent="Referências";
-botao.onclick=function(){aba("referencias",botao)};
-nav.appendChild(botao);
+function simular(){
+let ids=["meta","sensibilidade","relacao","glicemiaSim","carbSim"];
+let v=ids.map(id=>Number($(id).value));
+if(ids.some(id=>$(id).value==="")||v.some(x=>!Number.isFinite(x))||v[0]<=0||v[1]<=0||v[2]<=0||v[3]<0||v[4]<0)return alert("Confira os valores fictícios.");
+let alimento=v[4]/v[2],correcao=(v[3]-v[0])/v[1];
+$("resultadoBolus").innerHTML=`<b>Teste matemático, não orientação de dose</b>
+<p>Parcela alimentar: ${fmt(alimento)} unidades matemáticas</p>
+<p>Correção algébrica: ${fmt(correcao)} unidades matemáticas</p>
+<p><b>Soma: ${fmt(alimento+correcao)} unidades matemáticas</b></p>
+<p class="hint">Sem insulina ativa, regras para glicemia baixa ou validação clínica. Não utilizar para aplicação.</p>`;
+}
+$("btnSimular").onclick=simular;
 
-const painel=document.createElement("section");
-painel.id="referencias";
-painel.hidden=true;
-painel.innerHTML=`
-<h2>Central de Referências</h2>
-<p class="hint">
-Consulte a origem dos dados utilizados no CarbCare.
-Uma fonte listada aqui não significa que todos os
-valores do aplicativo tenham sido validados por ela.
-</p>
-<label>Pesquisar referência</label>
-<input id="pesquisaReferencia"
-placeholder="Nome, instituição ou assunto">
-<div id="listaReferencias"></div>
-<h3>Classificação dos dados</h3>
-<div class="card">
-<b>Referenciado</b>
-<p class="hint">Dado vinculado a uma fonte específica,
-verificada e identificável. Isso não equivale,
-por si só, à validação clínica.</p>
-</div>
-<div class="card">
-<b>Estimado</b>
-<p class="hint">Resultado obtido por conversão de
-medidas ou pressupostos que devem ser informados.</p>
-</div>
-<div class="card">
-<b>Demonstrativo</b>
-<p class="hint">Valor de teste, ainda não validado
-para uso nutricional ou clínico.</p>
-</div>
-<div class="card">
-<b>Cadastrado pelo usuário</b>
-<p class="hint">Informação inserida manualmente,
-cuja origem externa não foi verificada.</p>
-</div>
-<h3>Política de rastreabilidade</h3>
-<p class="hint">
-O registro deve preservar fonte, versão, data,
-método de cálculo e classificação do dado.
-Atualizações futuras não devem alterar
-silenciosamente os registros históricos.
-</p>`;
-document.querySelector("main").appendChild(painel);
+function mostrarHistorico(){
+let lista=registros.filter(r=>r.perfil===perfil);
+$("listaHistorico").innerHTML=lista.map((r,i)=>{
+let total=r.itens.reduce((s,a)=>s+a.carb,0);
+return `<div class="card"><b>${esc(r.tipo)} · ${esc(r.data)}</b>
+<p class="hint">${r.itens.map(a=>esc(a.nome)).join(", ")}</p>
+<strong>${fmt(total)} g carboidratos</strong>
+<p><button data-historico="${i}">Rastreabilidade</button></p></div>`;
+}).join("")||"<p>Sem registros.</p>";
+$("listaHistorico").querySelectorAll("[data-historico]").forEach(b=>b.onclick=()=>{
+let r=lista[Number(b.dataset.historico)];
+alert(r.itens.map(a=>{
+let o=a.origem;
+if(!o)return a.nome+"\nRegistro anterior à V2.3: origem não documentada.";
+return a.nome+"\nFonte: "+o.fonte+"\nClassificação: "+o.rotulo+
+"\nVersão: "+o.versao+"\nData: "+o.data+
+"\nMétodo: "+o.metodo+
+(o.quantidadeEstimada?"\nQuantidade estimada.":"");
+}).join("\n\n"));
+});
+let fim=new Date($("data").value+"T12:00:00"),pontos=[];
+for(let i=6;i>=0;i--){
+let d=new Date(fim);d.setDate(d.getDate()-i);
+let key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+let valor=lista.filter(r=>r.data===key).flatMap(r=>r.itens).reduce((s,a)=>s+a.carb,0);
+pontos.push({rotulo:String(d.getDate()),valor});
+}
+$("graficoSemana").innerHTML=grafico(pontos,"Carboidratos nos últimos sete dias");
+}
 
 function mostrarReferencias(){
-const q=norm(document.getElementById("pesquisaReferencia").value);
-document.getElementById("listaReferencias").innerHTML=
-referencias.filter(r=>!q||norm(
-r.nome+" "+r.instituicao+" "+r.tipo
-).includes(q)).map(r=>`
-<div class="card">
-<b>${escapeHTML(r.nome)}</b>
-<p class="hint">${escapeHTML(r.instituicao)}</p>
-<p><small>${escapeHTML(r.tipo)}</small></p>
-<p class="hint">${escapeHTML(r.nota)}</p>
-<a href="${r.url}" target="_blank"
-rel="noopener noreferrer">Consultar fonte original</a>
+let q=norm($("pesquisaReferencia").value);
+$("listaReferencias").innerHTML=referencias.filter(r=>!q||norm(r.nome+" "+r.instituicao+" "+r.tipo).includes(q)).map(r=>`
+<div class="ref"><b>${esc(r.nome)}</b>
+<p class="hint">${esc(r.instituicao)} · ${esc(r.tipo)}</p>
+<p class="hint">${esc(r.nota)}</p>
+<a href="${r.url}" target="_blank" rel="noopener noreferrer">Consultar fonte original</a>
 </div>`).join("")||"<p>Nenhuma referência encontrada.</p>";
 }
-document.getElementById("pesquisaReferencia")
-.addEventListener("input",mostrarReferencias);
+$("pesquisaReferencia").addEventListener("input",mostrarReferencias);
+
+function mostrarPerfis(){
+$("perfilAtivo").innerHTML=perfis.map(p=>`<option>${esc(p)}</option>`).join("");
+$("perfilAtivo").value=perfil;
+}
+function trocarPerfil(){
+perfil=$("perfilAtivo").value;gravar("perfil",perfil);
+mostrarDia();mostrarMetas();
+}
+$("perfilAtivo").addEventListener("change",trocarPerfil);
+function criarPerfil(){
+let p=$("novoPerfil").value.trim();
+if(!p||perfis.includes(p))return alert("Escolha outro nome.");
+perfis.push(p);perfil=p;
+gravar("perfis",perfis);gravar("perfil",perfil);
+$("novoPerfil").value="";mostrarPerfis();mostrarDia();
+}
+$("btnPerfil").onclick=criarPerfil;
+
+function exportar(){
+let lista=registros.filter(r=>r.perfil===perfil);
+let linhas=["Data;Refeição;Alimento;Quantidade;Unidade;Carboidratos;Calorias;Classificação;Fonte;Versão"];
+for(let r of lista)for(let a of r.itens){
+let o=a.origem||{};
+linhas.push([
+r.data,r.tipo,a.nome,fmt(a.q),a.unidade,fmt(a.carb),
+a.kcal==null?"":fmt(a.kcal),o.rotulo||"Não documentado",
+o.fonte||"",o.versao||""
+].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";"));
+}
+let blob=new Blob(["\uFEFF"+linhas.join("\r\n")],{type:"text/csv;charset=utf-8"});
+let url=URL.createObjectURL(blob),link=document.createElement("a");
+link.href=url;link.download="CarbCare_V2_3.csv";link.click();
+setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$("btnExportar").onclick=exportar;
+
+function apagar(){
+if(!confirm("Apagar todos os dados de teste desta versão, incluindo os registros anteriores da V2.2?"))return;
+Object.keys(localStorage).filter(k=>k.startsWith("cc22_")).forEach(k=>localStorage.removeItem(k));
+location.reload();
+}
+$("btnApagar").onclick=apagar;
+
+mostrarDia();
+mostrarBiblioteca();
+mostrarMetas();
+mostrarPerfis();
 mostrarReferencias();
-
-const bibliotecaAnterior=mostrarBiblioteca;
-mostrarBiblioteca=function(){
-bibliotecaAnterior();
-const q=norm($("busca").value);
-const lista=alimentos().filter(a=>
-!q||a.termos.some(t=>t.includes(q)));
-const linhas=$("listaAlimentos").querySelectorAll(".item");
-linhas.forEach((linha,i)=>{
-const a=lista[i];
-if(!a)return;
-const info=document.createElement("button");
-info.textContent="Ver origem";
-info.style.fontSize="12px";
-info.onclick=()=>exibirDetalhe({
-nome:a.nome,
-unidade:a.unidade,
-origem:origem(a)
-});
-linha.appendChild(info);
-});
-};
-
-const rascunhoAnterior=mostrarRascunho;
-mostrarRascunho=function(){
-rascunhoAnterior();
-const linhas=$("resultado").querySelectorAll(".item");
-linhas.forEach((linha,i)=>{
-const a=rascunho[i];
-if(!a)return;
-const info=document.createElement("button");
-info.textContent="Fonte";
-info.style.fontSize="12px";
-info.onclick=()=>exibirDetalhe({
-nome:a.nome,
-q:a.q,
-unidade:a.unidade,
-carb:a.q*a.carb/100,
-origem:origem(a)
-});
-linha.appendChild(info);
-});
-};
-
-const salvarAnterior=salvarRefeicao;
-salvarRefeicao=function(){
-const antes=registros.length;
-const copias=rascunho.map(a=>({
-nome:a.nome,
-q:a.q,
-unidade:a.unidade,
-carb:a.q*a.carb/100,
-origem:origem(a)
-}));
-salvarAnterior();
-if(registros.length>antes){
-const registro=registros[0];
-if(registro&&registro.itens){
-registro.itens.forEach((item,i)=>{
-if(copias[i])item.origem=copias[i].origem;
-});
-gravar("registros",registros);
-}
-}
-};
-
-const historicoAnterior=mostrarHistorico;
-mostrarHistorico=function(){
-historicoAnterior();
-const linhas=$("listaHistorico").querySelectorAll(".card");
-const lista=registros.filter(r=>r.perfil===perfil);
-linhas.forEach((linha,i)=>{
-const registro=lista[i];
-if(!registro)return;
-const botao=document.createElement("button");
-botao.textContent="Rastreabilidade";
-botao.onclick=()=>{
-const texto=registro.itens.map(a=>{
-const o=a.origem;
-return a.nome+"\n"+
-(o?"Fonte: "+o.fonte+
-"\nClassificação: "+o.rotulo+
-"\nVersão: "+o.versao+
-"\nData: "+o.data+
-"\nMétodo: "+o.metodo
-:"Registro anterior à V2.3: origem não documentada.")
-}).join("\n\n");
-alert(texto);
-};
-linha.appendChild(botao);
-});
-};
-
-const titulo=document.querySelector("header small");
-if(titulo)titulo.textContent=
-titulo.textContent.replace(/V2\.2/g,"V2.3");
-
-const rodape=document.querySelector("footer");
-if(rodape)rodape.textContent=
-rodape.textContent.replace(/V2\.2/g,"V2.3");
-
-})();
 </script>
-<!-- Fim da atualização V2.3 -->
-
-</script></body></html>
+</body>
+</html>
